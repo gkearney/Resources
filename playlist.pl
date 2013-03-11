@@ -3,7 +3,7 @@
 BEGIN {
         push @INC,"/opt/local/lib/perl5/site_perl/5.8.8/";
 }
-
+use POSIX qw(strftime);
 use Cwd; # module for finding the current working directory
 use File::Copy;
 use File::Basename;
@@ -66,6 +66,7 @@ sub ScanDirectory{
 	$movetodir = "/Volumes/Daisy/Daisy_Master_Backup/";
 	$record = '';
 	$xml = '';
+	$brlnote ='';
 	$dirname  = dirname($0);
     my ($workdir) = shift; 
 
@@ -81,11 +82,37 @@ sub ScanDirectory{
         next if ($name eq "..");
 
 		my $d = "$workdir/$name";
+		
+		if (-d $d) {
+			print "Checkng pathname of $d\n";
+			$old= $d;
+			$old =~ s/ +/_/gi;
+			$old =~ s/'//gi;
+			$old =~ s/\.//gi;
+			print "$d $old\n";
+			rename($d,$old);
+		}
+	}
+
+
+
+	chdir($workdir) or die "Unable to enter dir $workdir:$!\n";
+    opendir(DIR, ".") or die "Unable to open $workdir:$!\n";
+    my @names = readdir(DIR) or die "Unable to read $workdir:$!\n";
+    closedir(DIR);
+
+
+
+    foreach my $name (@names){
+        next if ($name eq "."); 
+        next if ($name eq "..");
+
+		my $d = "$workdir/$name";
 		if (-d $d) {
 			my @files = <$d/*>;
 			my $countfiles = @files;
 			print "Count of files in $name is: $countfiles\n";
-			next if ($countfiles < 3); 
+			next if ($countfiles < 2); 
 		}
 		
 		#if ($name eq "Daisy_master") {
@@ -96,6 +123,13 @@ sub ScanDirectory{
         
         #This is here to remove the BackUp directory created by MyStudioPC.
 		 if ($name eq "BackUp") {
+        	print "removing $workdir/$name\n";
+        	remove_tree("$workdir/$name") or die "Could not unlink $workdir/$name $!\n";
+        	next;
+        }
+
+        #This is here to remove the z3986 directory if it is found.
+		 if ($name eq "z3986") {
         	print "removing $workdir/$name\n";
         	remove_tree("$workdir/$name") or die "Could not unlink $workdir/$name $!\n";
         	next;
@@ -349,14 +383,20 @@ $dirnumber = @values[-1];
 
 if ($dirnumber =~ /G.+/){
 	$the_dir = "pd";
+	$brlnote = '';
 } else {
 	$the_dir = "restricted";
+	$brlnote = '';
 }
 
-if ($dirnumber =~ /BE.+/) {
+if ($dirnumber =~ /^B.+/) {
 	$the_dir = "restricted/braille";
 	$brlnote = "braille";
+} else {
+	$the_dir = "restricted";
+	$brlnote = '';
 }
+
 
 
 if ($dirnumber =~ /[0-9]+/) {
@@ -364,7 +404,7 @@ if ($dirnumber =~ /[0-9]+/) {
 
 if (!-d "/Volumes/books/$the_dir/$dirnumber") {
 	print "Making directory /Volumes/books/$the_dir/$dirnumber\n";
-	make_path("/Volumes/books/$the_dir/$dirnumber", {verbose => 1,mode => 0777,});
+	make_path("/Volumes/books/$the_dir/$dirnumber", {verbose => 1});
 } else {
 	#die "No Directory test failed: /Volumes/books/$the_dir/$dirnumber\n";
 	$rmcmd = "rm /Volumes/books/$the_dir/$dirnumber/*.*";
@@ -431,11 +471,8 @@ while($query_handle->fetch()) {
 		
 	}
 	
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-		$year += 1900; ## $year contains no. of years since 1900, to add 1900 to make Y2K compliant
-		my @month_abbr = qw( Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec );
-		
-		$create_dt = "$year-$mon-$mday";
+
+		$create_dt = strftime "%Y-%m-%d %H:%M:%S ", localtime;
 		$file_path = "$the_dir/$dirnumber/$name.zip";
 	 
 	
@@ -572,6 +609,36 @@ if ($the_dir eq "pd" or $wipo_test eq "Y"){
 	
 	$message = "Below is given the comma seperated values for $title by $creator\n\r\n\r,,\"ABWA\",\"AU\",\"$tigar_req_date\",\"$dirnumber\",,\"$name.zip\",\"$creator\",\"$title\",\"$subject\",\"$language\",\"$publisher\",\"$isbn_marc\",\"$restriction\",\"$agelevel\",\"$warning_S $warning_V\",\"$Synopsis\",\"$format\",\"$public_note\"\n";
 	$message2 = ",,\"ABWA\",\"AU\",\"$tigar_req_date\",\"$dirnumber\",,\"$name.zip\",\"$creator\",\"$title\",\"$subject\",\"$language\",\"$publisher\",\"$isbn_marc\",\"$restriction\",\"$agelevel\",\"$warning_S $warning_V\",\"$Synopsis\",\"$format\",\"$public_note\"\n";
+	$copyright_message = "The title $title has been converted by the Association for the Blind of Western Australia to an alternative format under the provisions of the Copyright Act. for more information please contact:\n\r
+	Gregory Kearney\n\r
+	Manager - Accessible Media\n\r
+	Association for the Blind of Western Australia\n\r
+	61 Kitchener Avenue, PO Box 101\n\r
+	Victoria Park 6979, WA Australia\n\r
+\n\r
+	Telephone: +61 (08) 9311 8246\n\r
+	Fax: +61 (08) 9361 8696\n\r
+	Toll free: 1800 658 388 (Australia only)\n\r
+	Email: gkearney@gmail.com\n\r
+\n\r	
+	comma seperated values for $title by $creator\n\r\n\r
+	\"$tigar_req_date\",\"1\",\"DAISY\",\"$isbn_marc\",,\"$title\",,\"$creator\",,\"$publisher\",,,,,,,\n";
+
+	# Send the email about the book to Copyright Agency
+			$to='gkearney@gmail.com';
+			$from= 'gkearney@gmail.com';
+			$subject="Information for $title by $creator from ABWA Perth";
+			 
+			open(MAIL, "|/usr/sbin/sendmail -t");
+			 
+			## Mail Header
+			print MAIL "To: $to\n";
+			print MAIL "From: $from\n";
+			print MAIL "Subject: $subject\n\n";
+			## Mail Body
+			print MAIL "$copyright_message";
+			 
+			close(MAIL);
 
 # Send the email about the book to WIPO TIGAR
 		$to='gkearney@gmail.com, hturneredit@gmail.com';
@@ -721,6 +788,7 @@ if ($isbn) {
 
  use Net::Twitter;
   use Scalar::Util 'blessed';
+	$unixtime = time;
 
 	$consumer_key = "YFhiuQoaER4I6gXkWj4e2g";
 	$consumer_secret = "DGUGa3H4GJsugJbAPJHC5c0bj5CeqknJuj6Pjzl8vY";
@@ -738,23 +806,52 @@ if ($isbn) {
       access_token        => $token,
       access_token_secret => $token_secret,
   );
-	my $thetweet = "$title$author$isbn_number has been converted to DAISY$braille_note";
+print "Braille Note: $brlnote\n\n";
+if ($brlnote eq "braille") {
+	print "in braille\n";
+	my $thetweet = "$title$author$isbn_number in Braille has been added to the ABWA library. #newbraillebook ($unixtime)";
 	my $myLength = length($thetweet);
+	print "$thetweet $myLength\n\n";
 	
 	if ($myLength < 140) {
 
-  my $result = $nt->update("$thetweet");
+	  my $result = $nt->update({status => "$thetweet"});
 
 
-  if ( my $err = $@ ) {
-      #die $@ unless blessed $err && $err->isa('Net::Twitter::Error');
+	  if ( my $err = $@ ) {
+	      #die $@ unless blessed $err && $err->isa('Net::Twitter::Error');
 
-      warn "HTTP Response Code: ", $err->code, "\n",
-           "HTTP Message......: ", $err->message, "\n",
-           "Twitter error.....: ", $err->error, "\n";
-  }
+	      warn "HTTP Response Code: ", $err->code, "\n",
+	           "HTTP Message......: ", $err->message, "\n",
+	           "Twitter error.....: ", $err->error, "\n";
+	  }
 
+	}
+} else {
+	print "in DAISY\n";
+	my $thetweet = "$title$author$isbn_number has been converted to DAISY$braille_note #newdaisybook ($unixtime)";
+	my $myLength = length($thetweet);
+	print "$thetweet $myLength\n\n";
+	
+	if ($myLength < 140) {
+
+	  my $result = $nt->update({status => "$thetweet"});
+
+
+	  if ( my $err = $@ ) {
+	      #die $@ unless blessed $err && $err->isa('Net::Twitter::Error');
+
+	      warn "HTTP Response Code: ", $err->code, "\n",
+	           "HTTP Message......: ", $err->message, "\n",
+	           "Twitter error.....: ", $err->error, "\n";
+	  }
+
+	}
 }
+
+	
+	
+	
 
 
 }
