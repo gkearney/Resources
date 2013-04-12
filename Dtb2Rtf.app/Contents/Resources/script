@@ -10,6 +10,11 @@ use File::Basename;
 
 #$mypath = "/Users/gkearney/Dropbox/Downloads/Judy_Moody_Was_in_a_Mood__Not_a__Greg_Kearney_Daisy_text_only";
 $mypath = $ARGV[0];
+print "$mypath\n";
+
+if (!$mypath) {
+	exit;
+}
 
 
 &ScanDirectory("$mypath");

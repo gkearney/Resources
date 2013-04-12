@@ -112,7 +112,7 @@ sub ScanDirectory{
 			my @files = <$d/*>;
 			my $countfiles = @files;
 			print "Count of files in $name is: $countfiles\n";
-			next if ($countfiles < 2); 
+			next if ($countfiles < 1); 
 		}
 		
 		#if ($name eq "Daisy_master") {
@@ -664,31 +664,24 @@ if ($the_dir eq "pd" or $wipo_test eq "Y"){
 		$user = "ABWA-upd";
 		$password = "-069-bm056df";
 		
-		$f = Net::FTP->new($host) or die "Can't open $host\n";
-		$f->login($user, $password) or die "Can't log $user in\n";
-		
-#		$dir = "/";
-#
-#		$f->cwd($dir) or die "Can't cwd to $dir\n";
+#		$f = Net::FTP->new($host) or die "Can't open $host\n";
+#		$f->login($user, $password)  or die "Can't open $host\n";
 #		
-#		$f->binary();
-#		$file_to_put = "$workdir.zip";
-#		print "Sending $workdir.zip to WIPO TIGAR\n\n";
-#		$f->put($file_to_put) or die "Can't put $file_to_put into $dir\n";
-		
-		$f->ascii();
-			$dir = "/";
-			$f->cwd($dir) or die "Can't cwd to $dir\n";
-			$dir = "metadata";
-			$f->cwd($dir) or die "Can't cwd to $dir\n";
+#
+#		
+#		$f->ascii();
+#			$dir = "/";
+#			$f->cwd($dir) or die "Can't cwd to $dir\n";
+#			$dir = "metadata";
+#			$f->cwd($dir) or die "Can't cwd to $dir\n";
+#			
+#				open (MYFILE, '>/tmp/wipotmp');
+#			 	print MYFILE "$message2";
+#			 	close (MYFILE); 
+#			
+#			$f->append("/tmp/wipotmp","ABWA-metadata.txt") or die "Can't append to file";
 			
-				open (MYFILE, '>/tmp/wipotmp');
-			 	print MYFILE "$message2";
-			 	close (MYFILE); 
-			
-			$f->append("/tmp/wipotmp","ABWA-metadata.txt") or die "Can't append to file";
-			
-			
+	
 		
 		
 		
